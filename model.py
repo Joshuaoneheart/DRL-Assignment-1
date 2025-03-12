@@ -29,6 +29,7 @@ class DQN(nn.Module):
         self.batch_size = batch_size
         self.gamma = gamma
         self.criterion = nn.MSELoss()
+        self.stations = [[0, 0], [0, 0], [0, 0], [0, 0]]
 
         # state related
         self.goal_cnt = 0
