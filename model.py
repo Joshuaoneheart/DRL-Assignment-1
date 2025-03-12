@@ -60,10 +60,10 @@ class DQN(nn.Module):
     def get_state_and_goal(self, obs, done):
         stations = [[0, 0], [0, 0], [0, 0], [0, 0]]
         taxi_row, taxi_col, stations[0][0], stations[0][1], stations[1][0], stations[1][1], stations[2][0], stations[2][1], stations[3][0], stations[3][1],obstacle_north, obstacle_south, obstacle_east, obstacle_west, passenger_look, destination_look = obs
+        if not passenger_look or not all([i[0] == j[0] and i[1] == j[1] for (i, j) in zip(self.stations, stations)]):
+            self.has_passenger = False
         goal = stations[self.goal_cnt]
         self.stations = stations
-        if not passenger_look:
-            self.has_passenger = False
         if [taxi_row, taxi_col] == goal:
             if not(passenger_look and not self.has_passenger) or not(destination_look and self.has_passenger):
                 self.goal_cnt += 1
