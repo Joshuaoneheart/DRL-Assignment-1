@@ -55,6 +55,8 @@ class DQN(nn.Module):
             action = random.choice(list(range(6)))
         if action == 4 and [state[0], state[1]] in self.stations and state[-2]:
             self.has_passenger = True
+        if action == 5 and state[-2] and [state[0], state[1]] in self.stations and self.has_passenger:
+            self.has_passenger = False
         return action
 
     def get_state_and_goal(self, obs, done):
@@ -66,8 +68,6 @@ class DQN(nn.Module):
             if not(passenger_look and not self.has_passenger) or not(destination_look and self.has_passenger):
                 self.goal_cnt += 1
                 self.goal_cnt %= 4
-        if done:
-            self.reset()
         return [taxi_row, taxi_col, goal[0], goal[1], obstacle_north, obstacle_south, obstacle_east, obstacle_west, passenger_look, destination_look, self.has_passenger], goal
 
     def forward(self, x):
