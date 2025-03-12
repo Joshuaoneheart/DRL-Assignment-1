@@ -5,7 +5,7 @@ import torch.optim as optim
 import numpy as np
 from memory import Memory
 class DQN(nn.Module):
-    def __init__(self, state_size, action_size, gamma=0.99, batch_size=32, lr=1e-5):
+    def __init__(self, state_size, action_size, gamma=0.99, batch_size=32, lr=1e-5, device="cpu"):
         super().__init__()
         self.policy_net = nn.Sequential(
                 nn.Linear(state_size, 128),
@@ -22,6 +22,7 @@ class DQN(nn.Module):
                 nn.Linear(64, action_size)
                 )
         self.tau = 0.005
+        self.device = device
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
         self.memory = Memory(1500, 4)
@@ -34,7 +35,7 @@ class DQN(nn.Module):
         self.has_passenger = False
     
     def load(self):
-        self.policy_net.load_state_dict(torch.load("model.pkl"))
+        self.policy_net.load_state_dict(torch.load("model.pkl", map_location=self.device))
         self.target_net.load_state_dict(self.policy_net.state_dict())
     
     def reward_shaping(self, reward, state, action):
@@ -49,7 +50,7 @@ class DQN(nn.Module):
         state, goal = self.get_state_and_goal(obs, False)
         if random.random() > epsilon:
             with torch.no_grad():
-                action = self.policy_net(torch.as_tensor(state).float().to("cuda")).argmax().item()
+                action = self.policy_net(torch.as_tensor(state).float().to(self.device)).argmax().item()
         else:
             action = random.choice(list(range(6)))
         if action == 4 and [state[0], state[1]] in self.stations and state[-2]:
