@@ -11,9 +11,9 @@ class Memory:
 
         self.future_p = 1 - (1. / (1 + k_future))
 
-    def compute_reward(self, achieved_goal, desired_goal, rewards):
+    def compute_reward(self, achieved_goal, desired_goal, rewards, actions):
         for i, (a_g, d_g) in enumerate(zip(achieved_goal, desired_goal)):
-            rewards[i] += 10 - abs(a_g[0] - d_g[0]) - abs(a_g[1] - d_g[1])
+            rewards[i] += (a_g[0] == d_g[0] and a_g[1] == d_g[1] and actions[i].item() in [0, 1, 2, 3]) * 10
         return rewards
 
     def sample(self, batch_size):
@@ -62,20 +62,22 @@ class Memory:
         desired_goals[her_indices[0]] = future_ag[her_indices[0]]
         for i, goal in enumerate(desired_goals):
             states[i][2] = goal[0]
-            states[i][3] = goal[1]
+            states[i][3] = goal[1] 
             next_states[i][2] = goal[0]
             next_states[i][3] = goal[1]
 
-        rewards = np.expand_dims(self.compute_reward(next_achieved_goals, desired_goals, rewards), 1)
+        rewards = np.expand_dims(self.compute_reward(next_achieved_goals, desired_goals, rewards, actions), 1)
 
         return states, actions, rewards, next_states, desired_goals, dones
 
     def add(self, transition):
+        self.memory_length += len(transition["state"])
         self.memory.append(transition)
         if len(self.memory) > self.capacity:
+            self.memory_length -= len(self.memory[0]["state"])
             self.memory.pop(0)
         assert len(self.memory) <= self.capacity
 
     def __len__(self):
-        return len(self.memory)
+        return self.memory_length
 
