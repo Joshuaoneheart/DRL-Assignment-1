@@ -98,7 +98,7 @@ class DQN(nn.Module):
                 q_table = self.policy_net(self.state_to_onehot(torch.as_tensor(state).float().to(self.device).unsqueeze(0))).argsort(descending=True)
                 action = q_table.squeeze(0)[0].item()
                 if action not in valid_action:
-                    for a in q_table[1:]:
+                    for a in q_table.squeeze(0)[1:]:
                         if a.item() in valid_action:
                             action = a.item()
                             break
