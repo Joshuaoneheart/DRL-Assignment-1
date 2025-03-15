@@ -15,7 +15,7 @@ class DQN(nn.Module):
                 nn.GELU(),
                 nn.Linear(256, action_size)
                 )
-        self.embed = nn.Embedding(100, 10)
+        self.embed = nn.Embedding(101, 10)
         self.target_net = nn.Sequential(
                 nn.Linear(state_size, 512),
                 nn.GELU(),
@@ -23,7 +23,6 @@ class DQN(nn.Module):
                 nn.GELU(),
                 nn.Linear(256, action_size)
                 )
-        self.tau = 0.005
         self.device = device
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
@@ -39,6 +38,7 @@ class DQN(nn.Module):
         self.goal_cnt = 0
         self.has_passenger = False
         self.prev_has_passenger = False
+        self.prev_pos = [10, 0]
     
     def load(self):
         self.load_state_dict(torch.load("model.pkl", map_location=self.device))
@@ -48,7 +48,7 @@ class DQN(nn.Module):
         if action == 5 and not([state[0], state[1]] in self.stations and state[-2]):
             reward -= 10
             self.has_passenger = False
-        if self.prev_has_passenger != self.has_passenger and self.has_passenger and state[0] == state[2] and state[1] == state[3]:
+        if self.prev_has_passenger != self.has_passenger and self.has_passenger and state[0] == state[4] and state[1] == state[5]:
             print("Get Passenger")
             reward += 10
         self.prev_has_passenger = self.has_passenger
@@ -59,11 +59,11 @@ class DQN(nn.Module):
 
     def state_to_onehot(self, state):
         idx = state[:, 0] * 10 + state[:, 1]
-        idx_goal = state[:, 2] * 10 + state[:, 3]
-        return torch.cat([self.embed(idx.long()), self.embed(idx_goal.long()), state[:, 4:]], dim=1)
+        prev_idx = state[:, 2] * 10 + state[:, 3]
+        idx_goal = state[:, 4] * 10 + state[:, 5]
+        return torch.cat([self.embed(idx.long()), self.embed(prev_idx.long()), self.embed(idx_goal.long()), state[:, 6:]], dim=1)
 
-    def get_action(self, obs, epsilon):
-        state, goal = self.get_state_and_goal(obs, False)
+    def get_action(self, state, epsilon):
         """
         for i in range(10):
             for j in range(10):
@@ -80,30 +80,12 @@ class DQN(nn.Module):
                     print("<  ", end="")
             print()
         """
-        valid_action = []
-        if not state[5]:
-            valid_action.append(0)
-        if not state[4]:
-            valid_action.append(1)
-        if not state[6]:
-            valid_action.append(2)
-        if not state[7]:
-            valid_action.append(3)
-        if [state[0], state[1]] in self.stations and state[-3] and not self.has_passenger:
-            valid_action.append(4)
-        if [state[0], state[1]] in self.stations and state[-2] and self.has_passenger:
-            valid_action.append(5)
+        self.prev_pos = (state[0], state[1])
         if random.random() > epsilon:
             with torch.no_grad():
-                q_table = self.policy_net(self.state_to_onehot(torch.as_tensor(state).float().to(self.device).unsqueeze(0))).argsort(descending=True)
-                action = q_table.squeeze(0)[0].item()
-                if action not in valid_action:
-                    for a in q_table.squeeze(0)[1:]:
-                        if a.item() in valid_action:
-                            action = a.item()
-                            break
+                action = self.policy_net(self.state_to_onehot(torch.as_tensor(state).float().to(self.device).unsqueeze(0))).argmax().item()
         else:
-            action = random.choice(valid_action)
+            action = random.choice(list(range(6)))
         if action == 4 and [state[0], state[1]] in self.stations and state[-3] and not self.has_passenger:
             self.has_passenger = True
         return action
@@ -113,6 +95,8 @@ class DQN(nn.Module):
         taxi_row, taxi_col, stations[0][0], stations[0][1], stations[1][0], stations[1][1], stations[2][0], stations[2][1], stations[3][0], stations[3][1],obstacle_north, obstacle_south, obstacle_east, obstacle_west, passenger_look, destination_look = obs
         if not passenger_look or not all([i[0] == j[0] and i[1] == j[1] for (i, j) in zip(self.stations, stations)]):
             self.has_passenger = False
+        if not all([i[0] == j[0] and i[1] == j[1] for (i, j) in zip(self.stations, stations)]):
+            self.prev_pos = [10, 0]
         goal = stations[self.goal_cnt]
         self.stations = stations
         if [taxi_row, taxi_col] == goal:
@@ -121,7 +105,7 @@ class DQN(nn.Module):
                 self.goal_cnt %= 4
         if done:
             self.reset()
-        return [taxi_row, taxi_col, goal[0], goal[1], obstacle_north, obstacle_south, obstacle_east, obstacle_west, passenger_look, destination_look, self.has_passenger], goal
+        return [taxi_row, taxi_col, self.prev_pos[0], self.prev_pos[1],goal[0], goal[1], obstacle_north, obstacle_south, obstacle_east, obstacle_west, passenger_look, destination_look, self.has_passenger], goal
 
     def forward(self, x):
         return self.policy_net(x)
