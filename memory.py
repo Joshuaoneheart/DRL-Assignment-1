@@ -11,9 +11,9 @@ class Memory:
 
         self.future_p = 1 - (1. / (1 + k_future))
 
-    def compute_reward(self, achieved_goal, desired_goal, rewards, actions):
-        for i, (a_g, d_g) in enumerate(zip(achieved_goal, desired_goal)):
-            rewards[i] += (a_g[0] == d_g[0] and a_g[1] == d_g[1] and actions[i].item() in [0, 1, 2, 3]) * 10
+    def compute_reward(self, states, achieved_goal, desired_goal, rewards, actions):
+        for i, (a_g, d_g, state) in enumerate(zip(achieved_goal, desired_goal, states)):
+            rewards[i] += (a_g[0] == d_g[0] and a_g[1] == d_g[1] and actions[i].item() in [0, 1, 2, 3]) * 10 - ((state[2] == a_g[0] and state[3] == a_g[1] or state[4] == a_g[0] and state[5] == a_g[1] or state[6] == a_g[0] and state[7] == a_g[1] or state[8] == a_g[0] and state[9] == a_g[1]) and (a_g[0] != d_g[0] or a_g[1] != d_g[1])) * 5
         return rewards
 
     def sample(self, batch_size):
@@ -61,12 +61,12 @@ class Memory:
 
         desired_goals[her_indices[0]] = future_ag[her_indices[0]]
         for i, goal in enumerate(desired_goals):
-            states[i][2] = goal[0]
-            states[i][3] = goal[1] 
-            next_states[i][2] = goal[0]
-            next_states[i][3] = goal[1]
+            states[i][10] = goal[0]
+            states[i][11] = goal[1] 
+            next_states[i][10] = goal[0]
+            next_states[i][11] = goal[1]
 
-        rewards = np.expand_dims(self.compute_reward(next_achieved_goals, desired_goals, rewards, actions), 1)
+        rewards = np.expand_dims(self.compute_reward(states, next_achieved_goals, desired_goals, rewards, actions), 1)
 
         return states, actions, rewards, next_states, desired_goals, dones
 
