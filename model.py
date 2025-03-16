@@ -54,7 +54,7 @@ class DQN(nn.Module):
         if self.prev_has_passenger != self.has_passenger and self.has_passenger and state[0] == state[10] and state[1] == state[11]:
             print("Get Passenger")
             reward += 10
-        if self.has_passenger and action == 4:
+        if state[-1] and action == 4:
             reward -= 10
         self.prev_has_passenger = self.has_passenger
         return reward

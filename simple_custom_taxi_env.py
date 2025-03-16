@@ -27,11 +27,33 @@ class SimpleTaxiEnv():
         self.passenger_loc = None
        
         self.obstacles = set()  # No obstacles in simple version
+        for _ in range(int(self.grid_size * self.grid_size / 5)):
+            tmp = (random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1))
+            if tmp not in self.stations:
+                self.obstacles.add(tmp)
         self.destination = None
 
     def reset(self):
         """Reset the environment, ensuring Taxi, passenger, and destination are not overlapping obstacles"""
         self.current_fuel = self.fuel_limit
+        self.grid_size = random.randint(5, 10)
+        self.stations = []
+        forbid_position = []
+        for i in range(4):
+            s = (random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1))
+            while s in forbid_position:
+                s = (random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1))
+            for x, y in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                forbid_position.append((s[0] + x, s[1] + y))
+            forbid_position.append(s)
+            self.stations.append(s)
+
+        self.obstacles = set()  # No obstacles in simple version
+        for _ in range(random.randint(0, self.grid_size ** 2 // 5)):
+            o = (random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1))
+            while o in self.obstacles or o in self.stations:
+                o = (random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1))
+
         self.passenger_picked_up = False
         
 
@@ -143,9 +165,9 @@ class SimpleTaxiEnv():
         
         
         grid[0][0]='R'
-        grid[0][4]='G'
-        grid[4][0]='Y'
-        grid[4][4]='B'
+        grid[0][9]='G'
+        grid[9][0]='Y'
+        grid[9][9]='B'
         '''
         # Place destination
         dy, dx = destination_pos
