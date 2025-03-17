@@ -15,7 +15,7 @@ def get_action(obs):
     #       To prevent crashes, implement a fallback strategy for missing keys. 
     #       Otherwise, even if your agent performs well in training, it may fail during testing.
     state, goal = policy.get_state_and_goal(obs, False)
-    return policy.get_action(state, 0)
+    return policy.get_action(state, 0.01)
 
     # You can submit this random agent to evaluate the performance of a purely random strategy.
 
