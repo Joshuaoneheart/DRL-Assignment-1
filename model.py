@@ -27,7 +27,7 @@ class DQN(nn.Module):
         self.device = device
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
-        self.memory = Memory(25000, 4)
+        self.memory = Memory(50000, 4)
         self.batch_size = batch_size
         self.gamma = gamma
         self.criterion = nn.MSELoss()
@@ -48,13 +48,13 @@ class DQN(nn.Module):
         self.target_net.load_state_dict(self.policy_net.state_dict())
     
     def reward_shaping(self, reward, state, action):
-        if action == 5 and not([state[0], state[1]] in self.stations and state[-2]):
+        if action == 5 and (not(self.has_passenger and [state[0], state[1]] in self.stations and state[-2]) or not self.has_passenger):
             reward -= 10
             self.has_passenger = False
         if self.prev_has_passenger != self.has_passenger and self.has_passenger and state[0] == state[10] and state[1] == state[11]:
             print("Get Passenger")
             reward += 10
-        if state[-1] and action == 4:
+        elif action == 4:
             reward -= 10
         self.prev_has_passenger = self.has_passenger
         return reward
