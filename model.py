@@ -14,6 +14,8 @@ class DQN(nn.Module):
                 nn.GELU(),
                 nn.Linear(512, 256),
                 nn.GELU(),
+                nn.Linear(256, 256),
+                nn.GELU(),
                 nn.Linear(256, action_size)
                 )
         self.embed = nn.Embedding(101, 20)
@@ -22,16 +24,18 @@ class DQN(nn.Module):
                 nn.GELU(),
                 nn.Linear(512, 256),
                 nn.GELU(),
+                nn.Linear(256, 256),
+                nn.GELU(),
                 nn.Linear(256, action_size)
                 )
         self.device = device
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
-        self.memory = Memory(50000, 4)
+        self.memory = Memory(100000000, 4)
         self.batch_size = batch_size
         self.gamma = gamma
         self.criterion = nn.MSELoss()
-        self.update_freq = 5000
+        self.update_freq = 10000
         self.num_update = 0
         self.stations = [[0, 0], [0, 0], [0, 0], [0, 0]]
 
@@ -45,17 +49,25 @@ class DQN(nn.Module):
     
     def load(self):
         self.load_state_dict(torch.load("model.pkl", map_location=self.device))
-        self.target_net.load_state_dict(self.policy_net.state_dict())
+        # self.target_net.load_state_dict(self.policy_net.state_dict())
     
-    def reward_shaping(self, reward, state, action):
-        if action == 5 and (not(self.has_passenger and [state[0], state[1]] in self.stations and state[-2]) or not self.has_passenger):
-            reward -= 10
+    def reward_shaping(self, reward, state, action, next_state):
+        if action == 5 and ((self.has_passenger and not([state[0], state[1]] in self.stations and state[-2])) or not self.has_passenger):
+            reward -= 20
+        if action in [0, 1, 2, 3] and (state[0] != next_state[0] or state[1] != next_state[1]):
+            if next_state[0] == state[10] and next_state[1] == state[11]:
+                reward += 10 
+            elif (state[2] == next_state[0] and state[3] == next_state[1]) or (state[4] == next_state[0] and state[5] == next_state[1]) or (state[6] == next_state[0] and state[7] == next_state[1]) or (state[8] == next_state[0] and state[9] == next_state[1]):
+                reward -= 15
+            elif state[0] == state[10] and state[1] == state[11] and (next_state[0] != next_state[10] or next_state[1] != next_state[11]):
+                reward -= 15
+        if action == 5:
             self.has_passenger = False
         if self.prev_has_passenger != self.has_passenger and self.has_passenger and state[0] == state[10] and state[1] == state[11]:
             print("Get Passenger")
             reward += 10
         elif action == 4:
-            reward -= 10
+            reward -= 20
         self.prev_has_passenger = self.has_passenger
         return reward
 
@@ -134,12 +146,14 @@ class DQN(nn.Module):
         with torch.no_grad():
             next_state_values = self.target_net(self.state_to_onehot(torch.as_tensor(next_states).float().to("cuda"))).max(1).values
         # Compute the expected Q values
-        expected_state_action_values = (next_state_values * self.gamma) + torch.as_tensor(rewards).float().to("cuda").squeeze(1).squeeze(1)
+        expected_state_action_values = torch.as_tensor(non_final_mask).to("cuda") * (next_state_values * self.gamma) + torch.as_tensor(rewards).float().to("cuda").squeeze(1)
+        print(expected_state_action_values, next_state_values, rewards)
         loss = self.criterion(state_action_values, expected_state_action_values.unsqueeze(1))
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         self.num_update += 1
-        if self.num_update % self.update_freq == 0:
+        if (self.num_update + 1) % self.update_freq == 0:
+            print("Update")
             self.target_net.load_state_dict(self.policy_net.state_dict())
         return loss.item()
