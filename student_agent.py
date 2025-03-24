@@ -4,7 +4,7 @@ import pickle
 import random
 import gym
 
-from model import DQN
+from ppo_model import PPO
 policy = DQN(127, 6, 0.99, 128, 0.0001)
 policy.load()
 def get_action(obs):
@@ -15,7 +15,7 @@ def get_action(obs):
     #       To prevent crashes, implement a fallback strategy for missing keys. 
     #       Otherwise, even if your agent performs well in training, it may fail during testing.
     state, goal = policy.get_state_and_goal(obs, False)
-    return policy.get_action(state, 0.1)
+    return policy.get_action(state)[0]
 
     # You can submit this random agent to evaluate the performance of a purely random strategy.
 
