@@ -5,7 +5,7 @@ import random
 import gym
 
 from ppo_model import PPO
-policy = DQN(127, 6, 0.99, 128, 0.0001)
+policy = PPO(127, 6, 0.99, 128, 0.0001)
 policy.load()
 def get_action(obs):
     
